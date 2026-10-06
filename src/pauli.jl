@@ -6,6 +6,9 @@
 "Numerical tolerance under which a coefficient is treated as zero."
 const ZERO_TOL = 1e-9
 
+"2×2 matrices of I, X, Y, Z (indexed by letter + 1)."
+const PAULI_MATRICES = (ComplexF64[1 0; 0 1], ComplexF64[0 1; 1 0], ComplexF64[0 -im; im 0], ComplexF64[1 0; 0 -1])
+
 """
     pauli_algebra_rule(a, b) -> (phase::ComplexF64, c::Int)
 

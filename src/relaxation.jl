@@ -62,17 +62,27 @@ end
 ## Relaxation parameters
 
 """
-    Relaxation(; L, d, kms = CommutatorKMS(), use_time_reversal = true, use_parity = true)
+    Relaxation(; L, d, basis = "full", kms = CommutatorKMS(), rdm_size = 0, use_time_reversal = true,
+                 use_parity = true, use_translation = false)
 
-Level of the hierarchy: chain truncated to `L` sites, monomials of degree ≤ `d`, KMS condition `kms`
-(`CommutatorKMS()` or `AnticommutatorKMS()`). The symmetry reductions can be disabled for checking.
+Level of the hierarchy: lattice truncated to a window of linear size `L` (L sites for a chain, L×L for a
+square lattice), and monomial basis `basis`:
+- `"full"`: all Pauli strings of degree ≤ `d` in the window,
+- `"contiguous"`: all Pauli strings supported on `d` consecutive sites (1D) or in a d×d square (2D).
+KMS condition `kms` (`CommutatorKMS()` or `AnticommutatorKMS()`). With `rdm_size = k > 0`, the reduced
+density matrices on `k` consecutive sites (1D) or k×k squares (2D) are constrained to be PSD (2ᵏ×2ᵏ, resp.
+2^{k²}×2^{k²} matrices). The exact symmetry reductions can be disabled for checking.
+`use_translation = true` restricts to translation-invariant states.
 """
 Base.@kwdef struct Relaxation
     L::Int
     d::Int
+    basis::String = "full"
     kms::KMSCondition = CommutatorKMS()
+    rdm_size::Int = 0
     use_time_reversal::Bool = true
     use_parity::Bool = true
+    use_translation::Bool = false
 end
 
 abstract type Abstract_Problem end
@@ -81,22 +91,73 @@ compute_bounds(pb::Abstract_Problem, relax::Relaxation; kwargs...) = error("$pb 
 
 
 """
-    build_monomial_basis(system, L, d; edge = true) -> Vector{PauliMonomial}
+    window_sites(system, L; edge = true) -> Vector{Int}
 
-Pauli strings of degree ≤ `d` on a chain of `L` sites (identity first). With `edge = false`, only
-sites ℓ:(L+1-ℓ) are used, where ℓ = interaction_range(system.interaction).
+Linear indices of the sites of the window of linear size `L`. With `edge = false`, only the sites whose
+coordinates all lie in ℓ:(L+1-ℓ), with ℓ = interaction_range(system.interaction), so that every
+Hamiltonian term touching them is inside the window.
 """
-function build_monomial_basis(system::Spin_Lattice_1D, L::Int, d::Int; edge::Bool = true)
-    system.local_algebra_dimension == 2 || error("Not implemented") # Assert qubits
+function window_sites(system::Spin_Lattice_1D, L::Int; edge::Bool = true)
     ℓ = interaction_range(system.interaction)
-    sites = edge ? (1:L) : (ℓ:(L+1-ℓ))
-    basis = [PauliMonomial(L, zeros(Int, L))]
-    for k in 1:d, locs in combinations(sites, k), ops in Iterators.product(fill(1:3, k)...)
-        term = zeros(Int, L)
-        term[locs] .= ops
-        push!(basis, PauliMonomial(L, term))
+    return collect(edge ? (1:L) : (ℓ:(L+1-ℓ)))
+end
+
+function window_sites(system::Square_Lattice_2D, L::Int; edge::Bool = true)
+    ℓ = interaction_range(system.interaction)
+    r = edge ? (1:L) : (ℓ:(L+1-ℓ))
+    return [(y-1)*L + x for y in r for x in r]
+end
+
+"""
+    local_boxes(system, L, sites, d) -> Vector{Vector{Int}}
+
+All segments of `d` consecutive sites (1D) or d×d squares (2D) of the window, intersected with `sites`.
+"""
+function local_boxes(::Spin_Lattice_1D, L::Int, sites::Vector{Int}, d::Int)
+    return [filter(s -> x0 ≤ s < x0 + d, sites) for x0 in 1:L]
+end
+
+function local_boxes(::Square_Lattice_2D, L::Int, sites::Vector{Int}, d::Int)
+    in_box(s, x0, y0) = x0 ≤ (s-1) % L + 1 < x0 + d && y0 ≤ (s-1) ÷ L + 1 < y0 + d
+    return [filter(s -> in_box(s, x0, y0), sites) for y0 in 1:L for x0 in 1:L]
+end
+
+"""
+    monomial_supports(system, L, sites, d, basis) -> Vector{Vector{Int}}
+
+Supports (sorted lists of sites among `sites`) of the non-identity monomials of the basis:
+all sets of ≤ `d` sites for `"full"`, all sets inside one of the `local_boxes` for `"contiguous"`.
+"""
+function monomial_supports(system::Spin_Lattice, L::Int, sites::Vector{Int}, d::Int, basis::String)
+    if basis == "full"
+        return [locs for k in 1:min(d, length(sites)) for locs in combinations(sites, k)]
+    elseif basis == "contiguous"
+        supports = Set{Vector{Int}}()
+        for box in local_boxes(system, L, sites, d), k in 1:length(box), locs in combinations(box, k)
+            push!(supports, locs)
+        end
+        return sort!(collect(supports); by = locs -> (length(locs), locs))
+    else
+        error("Unknown basis \"$basis\": use \"full\" or \"contiguous\"")
     end
-    return basis
+end
+
+"""
+    build_monomial_basis(system, L, d; edge = true, basis = "full") -> Vector{PauliMonomial}
+
+Pauli strings with supports `monomial_supports(system, L, window_sites(system, L; edge), d, basis)`,
+identity first.
+"""
+function build_monomial_basis(system::Spin_Lattice, L::Int, d::Int; edge::Bool = true, basis::String = "full")
+    system.local_algebra_dimension == 2 || error("Not implemented") # Assert qubits
+    n = num_sites(system, L)
+    monomials = [PauliMonomial(n, zeros(Int, n))]
+    for locs in monomial_supports(system, L, window_sites(system, L; edge), d, basis), ops in Iterators.product(fill(1:3, length(locs))...)
+        term = zeros(Int, n)
+        term[locs] .= ops
+        push!(monomials, PauliMonomial(n, term))
+    end
+    return monomials
 end
 
 
@@ -106,31 +167,37 @@ end
 Add the moment variables and the PSD (and, if `with_kms`, KMS and stationarity) constraints of the
 relaxation to `model`. Returns ρ(objective) as an affine expression.
 """
-function build_relaxation!(model::Model, system::Spin_Lattice_1D, relax::Relaxation, objective::PauliPolynomial;
+function build_relaxation!(model::Model, system::Spin_Lattice, relax::Relaxation, objective::PauliPolynomial;
                            with_kms::Bool, verbose::Bool)
     L, d = relax.L, relax.d
+    n = num_sites(system, L)
     d ≥ 1 || error("d must be ≥ 1")
-    objective.n == L || error("The objective is defined on $(objective.n) sites, but the relaxation uses L=$L")
+    objective.n == n || error("The objective is defined on $(objective.n) sites, but the relaxation window has $n sites (L=$L)")
     t0 = time()
 
-    H = get_hamiltonian(system.interaction, L)
+    H = get_hamiltonian(system.interaction, n)
     detected = detect_symmetries([H, objective])
     symmetries = Symmetries(detected.time_reversal && relax.use_time_reversal, relax.use_parity ? detected.z2 : Z2Symmetry[])
-    mm = MomentMap(model, L, symmetries)
+    canonical_uid = relax.use_translation ?
+        (uid -> unique_id(PauliMonomial(n, translate_to_origin(system, L, pauli_from_id(n, uid).term)))) : identity
+    mm = MomentMap(model, n, symmetries, canonical_uid)
 
     # (P)+(A) moment matrix M[i,j] = ρ(Pᵢ Pⱼ)
-    full = build_monomial_basis(system, L, d; edge = true)
+    full = build_monomial_basis(system, L, d; edge = true, basis = relax.basis)
     sizes_M = add_psd_blocks!(mm, full, (i, j) -> begin
         phase, Q = full[i] * full[j]
         from_monomial(Q, phase)
     end)
+
+    # (R) reduced density matrices ρ_S ≽ 0
+    sizes_R = relax.rdm_size > 0 ? add_rdm_constraints!(mm, system, L, relax.rdm_size; relax.use_translation) : Int[]
 
     # (K) KMS matrix and stationarity
     sizes_N, n_stat = Int[], 0
     if with_kms
         ℓ = interaction_range(system.interaction)
         L ≥ 2ℓ-1 || error("L=$L too small for interaction range ℓ=$ℓ. Need L ≥ $(2ℓ-1).")
-        inner = build_monomial_basis(system, L, d; edge = false)
+        inner = build_monomial_basis(system, L, d; edge = false, basis = relax.basis)
         sizes_N = add_psd_blocks!(mm, inner, kms_entry_function(relax.kms, H, from_monomial.(inner)))
         for A in stationarity_polynomials(relax.kms, H, inner), e in expectation(mm, A)
             is_zero_expr(e) && continue
@@ -145,9 +212,10 @@ function build_relaxation!(model::Model, system::Spin_Lattice_1D, relax::Relaxat
     is_zero_expr(obj_im) || @warn "Objective has a non-zero imaginary part; using its real part"
 
     if verbose
-        println("  Symmetries used  : $symmetries")
+        println("  Symmetries used  : $symmetries, translation = $(relax.use_translation)")
         println("  Moment variables : $(length(mm.moments))")
         println("  M blocks         : $sizes_M  (full basis $(length(full)), $(symmetries.time_reversal ? "real" : "complex"))")
+        isempty(sizes_R) || println("  RDM blocks       : $(length(sizes_R)) × $(first(sizes_R))")
         if with_kms
             println("  N blocks         : $sizes_N  ($(nameof(typeof(relax.kms))))")
             println("  Stationarity eqs : $n_stat")

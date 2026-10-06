@@ -13,12 +13,12 @@ end
 
 Minimise ρ(H) over the relaxation `relax`, solved with `optimizer`.
 """
-function compute_bounds(prob::GS_Energy_Problem{<:Spin_Lattice_1D}, relax::Relaxation; optimizer, verbose::Bool = true)
+function compute_bounds(prob::GS_Energy_Problem{<:Spin_Lattice}, relax::Relaxation; optimizer, verbose::Bool = true)
     verbose && println("── Ground state energy, $(prob.system.interaction), L=$(relax.L), d=$(relax.d) ──")
 
     model = Model(optimizer)
     verbose || set_silent(model)
-    H = get_hamiltonian(prob.system.interaction, relax.L)
+    H = get_hamiltonian(prob.system.interaction, num_sites(prob.system, relax.L))
     obj = build_relaxation!(model, prob.system, relax, H; with_kms = false, verbose)
 
     E_min = optimize_objective!(model, MIN_SENSE, obj, "energy")

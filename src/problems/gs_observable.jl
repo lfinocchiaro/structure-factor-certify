@@ -2,7 +2,7 @@
     GS_Observable_Problem(system, observable)
 
 Upper and lower bounds on the ground-state expectation value of `observable`, a PauliPolynomial
-defined on the L sites of the relaxation.
+defined on the sites of the relaxation window (see `num_sites`).
 """
 struct GS_Observable_Problem{T<:Spin_Lattice} <: Abstract_Problem
     system::T
@@ -14,13 +14,13 @@ end
 
 Minimise and maximise ρ(observable) over the relaxation `relax` (with KMS), solved with `optimizer`.
 """
-function compute_bounds(prob::GS_Observable_Problem{<:Spin_Lattice_1D}, relax::Relaxation; optimizer, verbose::Bool = true)
+function compute_bounds(prob::GS_Observable_Problem{<:Spin_Lattice}, relax::Relaxation; optimizer, verbose::Bool = true)
     verbose && println("── Ground state observable, $(prob.system.interaction), L=$(relax.L), d=$(relax.d) ──")
     return observable_bounds(prob.system, prob.observable, relax; optimizer, verbose)
 end
 
 # Lower and upper bounds on ρ(observable), shared with the structure factor problem
-function observable_bounds(system::Spin_Lattice_1D, observable::PauliPolynomial, relax::Relaxation; optimizer, verbose::Bool)
+function observable_bounds(system::Spin_Lattice, observable::PauliPolynomial, relax::Relaxation; optimizer, verbose::Bool)
     model = Model(optimizer)
     verbose || set_silent(model)
     obj = build_relaxation!(model, system, relax, observable; with_kms = true, verbose)

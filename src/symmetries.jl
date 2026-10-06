@@ -61,3 +61,37 @@ function detect_symmetries(polys::Vector{PauliPolynomial})
     end
     return Symmetries(time_reversal, z2)
 end
+
+
+## -------
+# Translation invariance
+#
+# For a translation-invariant state, ρ(Q) = ρ(τ_a Q) for every shift a (the state lives on the infinite
+# lattice, so this holds even if τ_a Q leaves the window). Each Pauli string is therefore identified with
+# its translate whose support starts at the origin of the window. Using it restricts the optimisation to
+# translation-invariant states (equivalently: the objective is replaced by its translation average).
+# --------
+
+"""
+    translate_to_origin(system, L, term) -> Vector{Int}
+
+Translate of the Pauli string `term` (on the window of linear size `L`) whose support starts at site 1
+(1D), or at the smallest x and smallest y of the window (2D).
+"""
+function translate_to_origin(::Spin_Lattice_1D, L::Int, term::Vector{Int})
+    first = findfirst(!=(0), term)
+    first === nothing && return term
+    return [term[first:end]; zeros(Int, first-1)]
+end
+
+function translate_to_origin(::Square_Lattice_2D, L::Int, term::Vector{Int})
+    occupied = findall(!=(0), term)
+    isempty(occupied) && return term
+    dx = minimum((s-1) % L for s in occupied)   # shift along x
+    dy = minimum((s-1) ÷ L for s in occupied)   # shift along y
+    shifted = zeros(Int, L^2)
+    for s in occupied
+        shifted[s - dy*L - dx] = term[s]
+    end
+    return shifted
+end

@@ -7,18 +7,21 @@
 # --------
 
 """
-    MomentMap(model, L, symmetries)
+    MomentMap(model, L, symmetries, canonical_uid = identity)
 
 Lazy map from Pauli strings on `L` sites to real JuMP variables `moments[uid] = ρ(Q)` of `model`.
+Strings with the same `canonical_uid` (e.g. translates of each other) share the same variable.
 """
 struct MomentMap
     model::Model
     L::Int
     symmetries::Symmetries
-    moments::Dict{Int,VariableRef}   # uid → ρ(Q), only for Q not forced to 0
+    canonical_uid::Function           # uid → uid of the representative of its equivalence class
+    moments::Dict{Int,VariableRef}   # canonical uid → ρ(Q), only for Q not forced to 0
 end
 
-MomentMap(model::Model, L::Int, symmetries::Symmetries) = MomentMap(model, L, symmetries, Dict{Int,VariableRef}())
+MomentMap(model::Model, L::Int, symmetries::Symmetries, canonical_uid::Function = identity) =
+    MomentMap(model, L, symmetries, canonical_uid, Dict{Int,VariableRef}())
 
 "Tuple of Z₂ parities labelling the symmetry sector of the Pauli string `term`."
 symmetry_sector(mm::MomentMap, term) = Tuple(z2_parity(term, sym) for sym in mm.symmetries.z2)
@@ -51,7 +54,7 @@ function expectation(mm::MomentMap, poly::PauliPolynomial, phase::ComplexF64 = 1
             continue
         end
         vanishes_by_symmetry(mm, pauli_from_id(mm.L, uid).term) && continue
-        y = moment_variable!(mm, uid)
+        y = moment_variable!(mm, mm.canonical_uid(uid))
         add_to_expression!(re, real(c), y)
         add_to_expression!(im_, imag(c), y)
     end

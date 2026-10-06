@@ -14,9 +14,9 @@ export PauliMonomial, PauliPolynomial
 export unique_id, pauli_from_id, from_monomial, commutator
 
 # Interactions, lattices and Hamiltonians
-export Interaction, TFIM_1D_Interaction, XY_1D_Interaction, Heisenberg_1D_Interaction
-export interaction_range, get_hamiltonian
-export Spin_Lattice, Spin_Lattice_1D
+export Interaction, TFIM_1D_Interaction, XY_1D_Interaction, Heisenberg_1D_Interaction, TFIM_2D_Interaction
+export interaction_range, get_hamiltonian, local_term
+export Spin_Lattice, Spin_Lattice_1D, Square_Lattice_2D, num_sites
 
 # Symmetries and moment variables
 export Z2Symmetry, Symmetries, detect_symmetries
@@ -32,13 +32,14 @@ export StructureFactor_Problem, TestFunction, phi_at, build_structure_factor_obs
 export tf_dirichlet, tf_point_mass, tf_gaussian, tf_custom, tf_single_correlator
 
 # Reference values
-export tfim_nn_correlator_numerical
+export tfim_nn_correlator_numerical, dense_matrix, exact_ground_energy
 
 include("pauli.jl")
 include("interactions.jl")
 include("symmetries.jl")
 include("moment_map.jl")
 include("relaxation.jl")
+include("reduced_density_matrix.jl")
 include("problems/gs_energy.jl")
 include("problems/gs_observable.jl")
 include("problems/structure_factor.jl")
