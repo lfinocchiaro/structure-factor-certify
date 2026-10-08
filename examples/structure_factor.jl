@@ -1,4 +1,4 @@
-# Certified bounds on the structure factor of the TFIM chain
+# Example uses of the structure factor
 
 using StructureFactorCertify
 using Dualization, Mosek, MosekTools
@@ -28,7 +28,7 @@ for (use_time_reversal, use_parity) in ((true, true), (false, false))
     @printf("  time reversal = %-5s, parity = %-5s: [%.7f, %.7f]  %.1f s\n", use_time_reversal, use_parity, lo, hi, t)
 end
 
-## General test function: Gaussian bump at p = 0 (probes ferromagnetic correlations)
-tf = tf_gaussian(2, 0.0, 0.3)
+## General test function: Fejér kernel at p = 0 (probes ferromagnetic correlations)
+tf = tf_fejer(2, 0.0, 1.0)
 display(tf)
 (lo, hi), _ = compute_bounds(StructureFactor_Problem(system, tf), Relaxation(L = 5, d = 2); optimizer)

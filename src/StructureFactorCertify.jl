@@ -29,7 +29,7 @@ export Abstract_Problem, compute_bounds
 # Problems
 export GS_Energy_Problem, GS_Observable_Problem
 export StructureFactor_Problem, TestFunction, phi_at, build_structure_factor_observable
-export tf_dirichlet, tf_point_mass, tf_gaussian, tf_custom, tf_single_correlator
+export tf_dirichlet, tf_point_mass, tf_fejer, tf_custom, tf_single_correlator
 
 # Reference values
 export tfim_nn_correlator_numerical, dense_matrix, exact_ground_energy

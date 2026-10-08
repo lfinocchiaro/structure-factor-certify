@@ -35,8 +35,8 @@ tf_dirichlet(N::Int) = TestFunction(N, ones(Float64, 2N+1))
 "`tf_point_mass(N, p0)`: φ(x) = cos(2π p0 x), approximating a point mass at momentum p0 ∈ [0,1]."
 tf_point_mass(N::Int, p0::Real) = TestFunction(N, [cos(2π * p0 * x) for x in -N:N])
 
-"`tf_gaussian(N, p0, σ)`: φ(x) = exp(-2π²σ²x²) cos(2π p0 x), a Gaussian bump of width σ at p0, truncated to |x| ≤ N."
-tf_gaussian(N::Int, p0::Real, σ::Real) = TestFunction(N, [exp(-2π^2 * σ^2 * x^2) * cos(2π * p0 * x) for x in -N:N])
+"`tf_fejer(N, p₀=0.0, phi_0=1.0)`: φ(x) = φ₀*(1-|x|/(N+1))/(N+1) * exp(2iπp₀), the N-th Fejér kernel centered at p0 st φ̂(p₀) = φ₀."
+tf_fejer(N::Int, p₀::Real = 0.0, φ₀::Real = 1.0) = TestFunction(N, [φ₀ * exp(2π * 1im * p₀) * (1 - abs(x)/(N+1))/(N+1) for x in -N:N])
 
 "`tf_custom(phi_vec)`: test function from a vector of odd length 2N+1, with `phi_vec[k] = φ(k-N-1)`."
 function tf_custom(phi_vec::Vector{Float64})

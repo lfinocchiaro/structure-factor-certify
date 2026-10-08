@@ -41,6 +41,6 @@ display(p)
 
 ## Save the figure in plots/ (at the root of the repository)
 plots_dir = mkpath(joinpath(@__DIR__, "..", "plots"))
-filename  = joinpath(plots_dir, "tfim_correlator_vs_g_$(Libc.strftime("%Y-%m-%d_%Hh%M", time())).png")
+filename  = joinpath(plots_dir, "tfim_correlator_vs_g_$(Libc.strftime("%d%m_%Hh%M", time())).png")
 savefig(p, filename)
 println("Figure saved to $filename")
