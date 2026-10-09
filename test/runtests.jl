@@ -18,6 +18,12 @@ const OPTIMIZER = Dualization.dual_optimizer(Mosek.Optimizer)
         @test pauli_from_id(3, unique_id(P)).term == P.term
     end
 
+    @testset "Fejér test function" begin
+        @test tf_fejer(3).phi ≈ [(1 - abs(x)/4)/4 for x in -3:3]
+        @test tf_fejer(3, 0.5).phi == (-1.0) .^ (-3:3) .* tf_fejer(3).phi   # cos(πx) = (-1)^x exactly
+        @test sum(tf_fejer(3, 0.5).phi .* cospi.(2 * 0.5 .* (-3:3))) ≈ 1.0   # φ̂(1/2) = 1
+    end
+
     @testset "Symmetry detection, TFIM" begin
         H = get_hamiltonian(TFIM_1D_Interaction(1.0, 0.5), 5)
         sym = detect_symmetries([H, build_structure_factor_observable(tf_single_correlator(1), 5)])

@@ -35,8 +35,13 @@ tf_dirichlet(N::Int) = TestFunction(N, ones(Float64, 2N+1))
 "`tf_point_mass(N, p0)`: φ(x) = cos(2π p0 x), approximating a point mass at momentum p0 ∈ [0,1]."
 tf_point_mass(N::Int, p0::Real) = TestFunction(N, [cos(2π * p0 * x) for x in -N:N])
 
-"`tf_fejer(N, p₀=0.0, phi_0=1.0)`: φ(x) = φ₀*(1-|x|/(N+1))/(N+1) * exp(2iπp₀), the N-th Fejér kernel centered at p0 st φ̂(p₀) = φ₀."
-tf_fejer(N::Int, p₀::Real = 0.0, φ₀::Real = 1.0) = TestFunction(N, [φ₀ * exp(2π * 1im * p₀) * (1 - abs(x)/(N+1))/(N+1) for x in -N:N])
+"""
+`tf_fejer(N, p₀=0.0, φ₀=1.0)`: N-th Fejér kernel centred at ±p₀,
+  φ(x) = φ₀ (1-|x|/(N+1))/(N+1) cos(2πp₀x),   φ̂(p) = φ₀/2 [K_N(p-p₀) + K_N(p+p₀)],
+with K_N(p) = [sin((N+1)πp) / ((N+1) sin πp)]² ≥ 0 and K_N(0) = 1. For p₀ ∈ {0, 1/2}, φ̂(p₀) = φ₀.
+Since f is even, ⟨f̂, φ̂⟩ equals the pairing with the complex kernel φ₀ K_N(p-p₀) alone.
+"""
+tf_fejer(N::Int, p₀::Real = 0.0, φ₀::Real = 1.0) = TestFunction(N, [φ₀ * (1 - abs(x)/(N+1))/(N+1) * cospi(2p₀ * x) for x in -N:N])
 
 "`tf_custom(phi_vec)`: test function from a vector of odd length 2N+1, with `phi_vec[k] = φ(k-N-1)`."
 function tf_custom(phi_vec::Vector{Float64})
