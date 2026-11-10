@@ -16,11 +16,9 @@ This repository follows a standard Julia package structure:
   - `moment_map.jl` — moment variables ρ(Q), created lazily, and symmetry-blocked PSD constraints
   - `relaxation.jl` — `Relaxation` parameters, KMS conditions, construction of the SDP
   - `problems/` — `GS_Energy_Problem`, `GS_Observable_Problem`, `StructureFactor_Problem`
-- `examples/` — runnable example scripts (own environment, with the solvers)
-- `plot_generation/` — certified bounds vs exact thermodynamic-limit values, for the 1D TFIM (`:TFIM`, field g, Fejér test function at p₀ = 0) and the XY chain (`:XY`, anisotropy γ, p₀ = 1/2)
-  - `theoretical_plots.jl` — exact correlators ⟨Z₀Z_x⟩ (free fermions), figures, `table_theoretical`
-  - `numerical_table.jl` — SDP bounds, `table_numerical`
-  - `plot_tables.jl` — joint plot of the two tables, `plot_bounds_vs_theory`
+- `examples/` — runnable example scripts (own environment, with the solvers and Plots)
+  - `chains_1d_plots.jl` — certified bounds vs exact thermodynamic-limit values, for the 1D TFIM (`:TFIM`, field g, Fejér test function at p₀ = 0) and the XY chain (`:XY`, anisotropy γ, p₀ = 1/2): exact correlators ⟨Z₀Z_x⟩ (free fermions) and figures, `table_theoretical`, SDP bounds `table_numerical`, joint plot `plot_bounds_vs_theory`, and `figure_correlator_vs_g`
+- `plots/` — generated figures (`.png`) and data tables (`table_*.csv`)
 - `test/` — unit tests (require a Mosek license)
 
 ## Quick start
@@ -43,11 +41,12 @@ julia --project=examples -e "using Pkg; Pkg.instantiate()"
 julia --project=examples examples/structure_factor.jl
 ```
 
-To produce the plots for one model (here XY; Plots must be available, e.g. in the default environment), in `julia --project=.`:
+To produce the plots and tables for one model (here XY), in `julia --project=examples` from the repository root:
 
 ```julia
-include("plot_generation/theoretical_plots.jl"); table_theoretical(:XY); figure_panels(:XY)
-include("plot_generation/numerical_table.jl");   table_numerical(:XY; verbose = true)
-include("plot_generation/plot_tables.jl");       plot_bounds_vs_theory(:XY)
+include("examples/chains_1d_plots.jl")
+table_theoretical(:XY); figure_panels(:XY)
+table_numerical(:XY; verbose = true)
+plot_bounds_vs_theory(:XY)
 ```
 

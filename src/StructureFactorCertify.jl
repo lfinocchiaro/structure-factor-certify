@@ -33,6 +33,7 @@ export tf_dirichlet, tf_point_mass, tf_fejer, tf_custom, tf_single_correlator
 
 # Reference values
 export tfim_nn_correlator_numerical, dense_matrix, exact_ground_energy
+export exact_correlations, exact_dirac_weight, exact_overlap, exact_structure_factor
 
 include("pauli.jl")
 include("interactions.jl")
@@ -44,5 +45,6 @@ include("problems/gs_energy.jl")
 include("problems/gs_observable.jl")
 include("problems/structure_factor.jl")
 include("reference_values.jl")
+include("exact_chains.jl")
 
 end
